@@ -1,0 +1,435 @@
+{
+  "name": "theme-explorer",
+  "displayName": "Theme Explorer",
+  "description": "Quick switching of themes, fonts, and icons, and can change randomly from time to time.",
+  "icon": "resources/theme-explorer.png",
+  "publisher": "moonyoulove",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/moonyoulove/vscode-theme-explorer.git"
+  },
+  "version": "1.0.0",
+  "engines": {
+    "vscode": "^1.91.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "*"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "theme-explorer.randomAll",
+        "title": "Random Change Theme, Font and Icon",
+        "category": "Theme Explorer"
+      },
+      {
+        "command": "theme-explorer.deleteFont",
+        "title": "Delete",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "theme-explorer.deleteTheme",
+        "title": "Delete",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "theme-explorer.deleteIcon",
+        "title": "Delete",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "theme-explorer.addFont",
+        "title": "Add",
+        "icon": "$(add)"
+      },
+      {
+        "command": "theme-explorer.addTheme",
+        "title": "Add",
+        "icon": "$(add)"
+      },
+      {
+        "command": "theme-explorer.themeStyleDark",
+        "title": "Dark Style",
+        "icon": {
+          "light": "resources/dark-light.svg",
+          "dark": "resources/dark-dark.svg"
+        }
+      },
+      {
+        "command": "theme-explorer.themeStyleLight",
+        "title": "Light Style",
+        "icon": {
+          "light": "resources/light-light.svg",
+          "dark": "resources/light-dark.svg"
+        }
+      },
+      {
+        "command": "theme-explorer.themeStyleBoth",
+        "title": "All Style",
+        "icon": {
+          "light": "resources/both-light.svg",
+          "dark": "resources/both-dark.svg"
+        }
+      },
+      {
+        "command": "theme-explorer.addIcon",
+        "title": "Add",
+        "icon": "$(add)"
+      },
+      {
+        "command": "theme-explorer.ignoreFont",
+        "title": "Ignore",
+        "icon": "$(eye-closed)"
+      },
+      {
+        "command": "theme-explorer.ignoreTheme",
+        "title": "Ignore",
+        "icon": "$(eye-closed)"
+      },
+      {
+        "command": "theme-explorer.ignoreIcon",
+        "title": "Ignore",
+        "icon": "$(eye-closed)"
+      },
+      {
+        "command": "theme-explorer.unignoreFont",
+        "title": "Cancel Ignore",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "theme-explorer.unignoreTheme",
+        "title": "Cancel Ignore",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "theme-explorer.unignoreIcon",
+        "title": "Cancel Ignore",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "theme-explorer.randomFont",
+        "title": "Random",
+        "icon": {
+          "light": "resources/random-light.svg",
+          "dark": "resources/random-dark.svg"
+        }
+      },
+      {
+        "command": "theme-explorer.randomTheme",
+        "title": "Random",
+        "icon": {
+          "light": "resources/random-light.svg",
+          "dark": "resources/random-dark.svg"
+        }
+      },
+      {
+        "command": "theme-explorer.randomIcon",
+        "title": "Random",
+        "icon": {
+          "light": "resources/random-light.svg",
+          "dark": "resources/random-dark.svg"
+        }
+      }
+    ],
+    "configuration": {
+      "title": "Theme Explorer",
+      "properties": {
+        "theme-explorer.ignoreFonts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Fonts to exclude during random selection."
+        },
+        "theme-explorer.ignoreThemes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Themes to exclude during random selection."
+        },
+        "theme-explorer.ignoreIcons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Icons to exclude during random selection."
+        },
+        "theme-explorer.changeFont": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to include fonts when executing \"Random All\"."
+        },
+        "theme-explorer.changeTheme": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to include fonts when executing \"Random All\"."
+        },
+        "theme-explorer.changeIcon": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to include fonts when executing \"Random All\"."
+        },
+        "theme-explorer.themeStyle": {
+          "type": "string",
+          "enum": [
+            "both",
+            "dark",
+            "light"
+          ],
+          "default": "both",
+          "description": "Filter theme styles."
+        },
+        "theme-explorer.randomType": {
+          "type": "string",
+          "enum": [
+            "none",
+            "startup",
+            "interval"
+          ],
+          "default": "none",
+          "description": "Type of randomization mode."
+        },
+        "theme-explorer.randomInterval": {
+          "type": "number",
+          "default": 5,
+          "minimum": 0.0005,
+          "description": "Time to wait when using interval randomization, in hours."
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "theme-explorer",
+          "title": "Theme Explorer",
+          "icon": "resources/theme-explorer.svg"
+        }
+      ]
+    },
+    "views": {
+      "theme-explorer": [
+        {
+          "id": "theme-explorer.font",
+          "name": "Font"
+        },
+        {
+          "id": "theme-explorer.theme",
+          "name": "Theme"
+        },
+        {
+          "id": "theme-explorer.icon",
+          "name": "Icon"
+        }
+      ]
+    },
+    "menus": {
+      "view/item/context": [
+        {
+          "command": "theme-explorer.deleteFont",
+          "when": "view == theme-explorer.font",
+          "group": "inline@2"
+        },
+        {
+          "command": "theme-explorer.deleteTheme",
+          "when": "view == theme-explorer.theme",
+          "group": "inline@2"
+        },
+        {
+          "command": "theme-explorer.deleteIcon",
+          "when": "view == theme-explorer.icon",
+          "group": "inline@2"
+        },
+        {
+          "command": "theme-explorer.ignoreFont",
+          "when": "view == theme-explorer.font && viewItem != ignored",
+          "group": "inline@1"
+        },
+        {
+          "command": "theme-explorer.ignoreTheme",
+          "when": "view == theme-explorer.theme && viewItem != ignored",
+          "group": "inline@1"
+        },
+        {
+          "command": "theme-explorer.ignoreIcon",
+          "when": "view == theme-explorer.icon && viewItem != ignored",
+          "group": "inline@1"
+        },
+        {
+          "command": "theme-explorer.unignoreFont",
+          "when": "view == theme-explorer.font && viewItem == ignored",
+          "group": "inline@1"
+        },
+        {
+          "command": "theme-explorer.unignoreTheme",
+          "when": "view == theme-explorer.theme && viewItem == ignored",
+          "group": "inline@1"
+        },
+        {
+          "command": "theme-explorer.unignoreIcon",
+          "when": "view == theme-explorer.icon && viewItem == ignored",
+          "group": "inline@1"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "theme-explorer.addFont",
+          "when": "view == theme-explorer.font",
+          "group": "navigation@2"
+        },
+        {
+          "command": "theme-explorer.addTheme",
+          "when": "view == theme-explorer.theme",
+          "group": "navigation@3"
+        },
+        {
+          "command": "theme-explorer.addIcon",
+          "when": "view == theme-explorer.icon",
+          "group": "navigation@2"
+        },
+        {
+          "command": "theme-explorer.themeStyleDark",
+          "when": "view == theme-explorer.theme && config.theme-explorer.themeStyle == dark",
+          "group": "navigation@1"
+        },
+        {
+          "command": "theme-explorer.themeStyleLight",
+          "when": "view == theme-explorer.theme && config.theme-explorer.themeStyle == light",
+          "group": "navigation@1"
+        },
+        {
+          "command": "theme-explorer.themeStyleBoth",
+          "when": "view == theme-explorer.theme && config.theme-explorer.themeStyle == both",
+          "group": "navigation@1"
+        },
+        {
+          "command": "theme-explorer.randomFont",
+          "when": "view == theme-explorer.font",
+          "group": "navigation@1"
+        },
+        {
+          "command": "theme-explorer.randomTheme",
+          "when": "view == theme-explorer.theme",
+          "group": "navigation@2"
+        },
+        {
+          "command": "theme-explorer.randomIcon",
+          "when": "view == theme-explorer.icon",
+          "group": "navigation@1"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "theme-explorer.deleteFont",
+          "when": "false"
+        },
+        {
+          "command": "theme-explorer.deleteTheme",
+          "when": "false"
+        },
+        {
+          "command": "theme-explorer.deleteIcon",
+          "when": "false"
+        },
+        {
+          "command": "theme-explorer.addFont",
+          "when": "false"
+        },
+        {
+          "command": "theme-explorer.addTheme",
+          "when": "false"
+        },
+        {
+          "command": "theme-explorer.themeStyleDark",
+          "when": "false"
+        },
+        {
+          "command": "theme-explorer.themeStyleLight",
+          "when": "false"
+        },
+        {
+          "command": "theme-explorer.themeStyleBoth",
+          "when": "false"
+        },
+        {
+          "command": "theme-explorer.addIcon",
+          "when": "false"
+        },
+        {
+          "command": "theme-explorer.ignoreFont",
+          "when": "false"
+        },
+        {
+          "command": "theme-explorer.ignoreTheme",
+          "when": "false"
+        },
+        {
+          "command": "theme-explorer.ignoreIcon",
+          "when": "false"
+        },
+        {
+          "command": "theme-explorer.unignoreFont",
+          "when": "false"
+        },
+        {
+          "command": "theme-explorer.unignoreTheme",
+          "when": "false"
+        },
+        {
+          "command": "theme-explorer.unignoreIcon",
+          "when": "false"
+        },
+        {
+          "command": "theme-explorer.randomFont",
+          "when": "false"
+        },
+        {
+          "command": "theme-explorer.randomTheme",
+          "when": "false"
+        },
+        {
+          "command": "theme-explorer.randomIcon",
+          "when": "false"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "npm run check-types && npm run lint && node esbuild.js",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "package": "npm run check-types && npm run lint && node esbuild.js --production",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src --ext ts",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.6",
+    "@types/node": "18.x",
+    "@types/vscode": "^1.91.0",
+    "@typescript-eslint/eslint-plugin": "^7.11.0",
+    "@typescript-eslint/parser": "^7.11.0",
+    "@vscode/test-cli": "^0.0.9",
+    "@vscode/test-electron": "^2.4.0",
+    "esbuild": "^0.21.4",
+    "eslint": "^8.57.0",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "yaml": "^2.4.5"
+  },
+  "license": "MIT"
+}
