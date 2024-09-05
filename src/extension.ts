@@ -30,6 +30,7 @@ abstract class Tree<T extends Node> implements vscode.TreeDataProvider<T> {
     onDidChangeTreeData: vscode.Event<T | null> = this.didChangeTreeDataEventEmitter.event;
     abstract root: T;
     view: vscode.TreeView<T> | null = null;
+    private _needsScroll: boolean = false;
 
     getTreeItem(element: T) {
         return element;
@@ -43,7 +44,18 @@ abstract class Tree<T extends Node> implements vscode.TreeDataProvider<T> {
         this.root.removeAllChild();
         this.makeTreeData();
         this.didChangeTreeDataEventEmitter.fire(null);
-        this.scrollToCurrent();
+        if (this.isNeedsScroll()) {
+            this._needsScroll = false;
+            this.scrollToCurrent();
+        }
+    }
+
+    isNeedsScroll() {
+        return this._needsScroll;
+    }
+
+    needsScroll() {
+        this._needsScroll = true;
     }
 
     abstract makeTreeData(): void;
@@ -321,18 +333,21 @@ class TreeManager {
             const font = fontTree.getRandomItem();
             if (font) {
                 fontTree.setConfig(font, config);
+                fontTree.needsScroll();
             }
         }
         if (config.get("theme-explorer.changeTheme", true)) {
             const theme = themeTree.getRandomItem();
             if (theme) {
                 themeTree.setConfig(theme, config);
+                themeTree.needsScroll();
             }
         }
         if (config.get("theme-explorer.changeIcon", true)) {
             const icon = iconTree.getRandomItem();
             if (icon) {
                 iconTree.setConfig(icon, config);
+                iconTree.needsScroll();
             }
         }
     }
@@ -520,18 +535,21 @@ export function activate(context: vscode.ExtensionContext) {
         const font = fontTree.getRandomItem();
         if (font) {
             fontTree.setConfig(font, null, true);
+            fontTree.needsScroll();
         }
     }));
     context.subscriptions.push(vscode.commands.registerCommand("theme-explorer.randomIcon", () => {
         const icon = iconTree.getRandomItem();
         if (icon) {
             iconTree.setConfig(icon, null, true);
+            iconTree.needsScroll();
         }
     }));
     context.subscriptions.push(vscode.commands.registerCommand("theme-explorer.randomTheme", () => {
         const theme = themeTree.getRandomItem();
         if (theme) {
             themeTree.setConfig(theme, null, true);
+            themeTree.needsScroll();
         }
     }));
 
