@@ -187,6 +187,10 @@
           "default": "both",
           "description": "Filter theme styles."
         },
+        "theme-explorer.fontLigatureAssociation": {
+          "type": "object",
+          "description": "Association of a font and a font ligature configuration."
+        },
         "theme-explorer.randomType": {
           "type": "string",
           "enum": [

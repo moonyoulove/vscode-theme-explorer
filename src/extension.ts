@@ -171,7 +171,30 @@ class FontTree extends Tree<Font> implements vscode.TreeDragAndDropController<Fo
         } else {
             fonts.unshift(font.name);
         }
-        updateConfig("editor.fontFamily", Font.toString(fonts), config, showError);
+        updateConfig(
+            "editor.fontFamily",
+            Font.toString(fonts),
+            config,
+            showError,
+        );
+
+        const fontLigatures: object = config.get(
+            "theme-explorer.fontLigatureAssociation",
+            {},
+        );
+        let liga = "";
+        Object.entries(fontLigatures).forEach(([key, value]) => {
+            if (key === fonts[0]) {
+                liga = value;
+            }
+        });
+
+                updateConfig(
+                    "editor.fontLigatures",
+            liga,
+                    config,
+                    showError,
+                );
     }
 }
 
