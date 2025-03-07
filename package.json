@@ -133,6 +133,22 @@
           "light": "resources/random-light.svg",
           "dark": "resources/random-dark.svg"
         }
+      },
+      {
+        "command": "theme-explorer.ligatureEnabled",
+        "title": "Ligature Enabled",
+        "icon": {
+          "light": "resources/merge-light.svg",
+          "dark": "resources/merge-dark.svg"
+        }
+      },
+      {
+        "command": "theme-explorer.ligatureDisabled",
+        "title": "Ligature Disabled",
+        "icon": {
+          "light": "resources/split-light.svg",
+          "dark": "resources/split-dark.svg"
+        }
       }
     ],
     "configuration": {
@@ -189,7 +205,7 @@
         },
         "theme-explorer.fontLigatureAssociation": {
           "type": "object",
-          "description": "Association of a font and a font ligature configuration."
+          "markdownDescription": "Association of a font and a font ligature configuration.\n\n**Example:**\n```json\n\"theme-explorer.fontLigatureAssociation\": {\n        \"Fira Code\": \"'cv02', 'cv14', 'cv25', 'cv26', 'cv28', 'cv32', 'ss01', 'ss02', 'ss06', 'zero'\",\n        \"JetBrains Mono\": false\n    }\n```"
         },
         "theme-explorer.randomType": {
           "type": "string",
@@ -327,6 +343,16 @@
           "command": "theme-explorer.randomIcon",
           "when": "view == theme-explorer.icon",
           "group": "navigation@1"
+        },
+        {
+          "command": "theme-explorer.ligatureEnabled",
+          "when": "view == theme-explorer.font && config.editor.fontLigatures",
+          "group": "navigation@1"
+        },
+        {
+          "command": "theme-explorer.ligatureDisabled",
+          "when": "view == theme-explorer.font && !config.editor.fontLigatures",
+          "group": "navigation@1"
         }
       ],
       "commandPalette": [
@@ -400,6 +426,14 @@
         },
         {
           "command": "theme-explorer.randomIcon",
+          "when": "false"
+        },
+        {
+          "command": "theme-explorer.ligatureEnabled",
+          "when": "false"
+        },
+        {
+          "command": "theme-explorer.ligatureDisabled",
           "when": "false"
         }
       ]

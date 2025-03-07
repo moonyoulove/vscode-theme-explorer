@@ -171,30 +171,7 @@ class FontTree extends Tree<Font> implements vscode.TreeDragAndDropController<Fo
         } else {
             fonts.unshift(font.name);
         }
-        updateConfig(
-            "editor.fontFamily",
-            Font.toString(fonts),
-            config,
-            showError,
-        );
-
-        const fontLigatures: object = config.get(
-            "theme-explorer.fontLigatureAssociation",
-            {},
-        );
-        let liga = "";
-        Object.entries(fontLigatures).forEach(([key, value]) => {
-            if (key === fonts[0]) {
-                liga = value;
-            }
-        });
-
-                updateConfig(
-                    "editor.fontLigatures",
-            liga,
-                    config,
-                    showError,
-                );
+        updateConfig("editor.fontFamily", Font.toString(fonts), config, showError);
     }
 }
 
@@ -576,8 +553,20 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }));
 
+    context.subscriptions.push(vscode.commands.registerCommand("theme-explorer.ligatureEnabled", () => {
+        const config = vscode.workspace.getConfiguration();
+        updateLigature(false, config, true);
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand("theme-explorer.ligatureDisabled", () => {
+        const config = vscode.workspace.getConfiguration();
+        updateLigature(true, config, true);
+    }));
+
     context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(({ affectsConfiguration }) => {
-        if (affectsConfiguration("editor.fontFamily") || affectsConfiguration("theme-explorer.ignoreFonts")) {
+        if (affectsConfiguration("editor.fontFamily") || affectsConfiguration("theme-explorer.ignoreFonts")
+            || affectsConfiguration("editor.fontLigatures"))
+        {
             fontTree.refresh();
         } else if (affectsConfiguration("workbench.colorTheme") || affectsConfiguration("theme-explorer.ignoreThemes")
             || affectsConfiguration("theme-explorer.themeStyle"))
@@ -587,6 +576,10 @@ export function activate(context: vscode.ExtensionContext) {
             iconTree.refresh();
         } else if (affectsConfiguration("theme-explorer.randomType") || affectsConfiguration("theme-explorer.randomInterval")) {
             treeManager.updateRandom(context);
+        }
+        
+        if (affectsConfiguration("editor.fontFamily") || affectsConfiguration("theme-explorer.fontLigatureAssociation")) {
+            updateLigature();
         }
     }));
 
@@ -609,4 +602,36 @@ function updateConfig(section: string, value: any, config: vscode.WorkspaceConfi
             vscode.window.showErrorMessage(reason.message);
         }
     });
+}
+
+function updateLigature(enabled?: boolean, config: vscode.WorkspaceConfiguration | null = null, showError: boolean = false) {
+    config ??= vscode.workspace.getConfiguration();
+    enabled ??= config.get("editor.fontLigatures", false) !== false;
+    const fonts: string[] = Font.toArray(config.get("editor.fontFamily", ""));
+
+    const fontLigatures: object = config.get(
+        "theme-explorer.fontLigatureAssociation",
+        {},
+    );
+    let liga: boolean | string = enabled;
+    // can only be set individually when globally enabled
+    if (enabled) {
+        Object.entries(fontLigatures).forEach(([key, value]) => {
+            if (key === fonts[0]) {
+                liga = value;
+            }
+        });
+
+        // avoid being treated as globally disabled
+        if (!liga) {
+            liga = "'liga' off";
+        }
+    }
+
+    updateConfig(
+        "editor.fontLigatures",
+        liga,
+        config,
+        showError,
+    );
 }
