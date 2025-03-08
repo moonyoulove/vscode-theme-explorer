@@ -88,7 +88,7 @@ abstract class Tree<T extends Node> implements vscode.TreeDataProvider<T> {
         return filtered[index];
     }
 
-    abstract setConfig(value: T, config: vscode.WorkspaceConfiguration, showError: boolean): void;
+    abstract setConfig(value: T, config: vscode.WorkspaceConfiguration, showError: boolean): Promise<void>;
 
     setView(view: vscode.TreeView<T>) {
         this.view = view;
@@ -162,7 +162,7 @@ class FontTree extends Tree<Font> implements vscode.TreeDragAndDropController<Fo
         }
     }
 
-    setConfig(font: Font, config: vscode.WorkspaceConfiguration | null = null, showError: boolean = false): void {
+    async setConfig(font: Font, config: vscode.WorkspaceConfiguration | null = null, showError: boolean = false): Promise<void> {
         config = config ?? vscode.workspace.getConfiguration();
         const fonts: string[] = Font.toArray(config.get("editor.fontFamily", ""));
         const hasHidden = fonts.slice(1).includes(fonts[0]);
@@ -171,7 +171,7 @@ class FontTree extends Tree<Font> implements vscode.TreeDragAndDropController<Fo
         } else {
             fonts.unshift(font.name);
         }
-        updateConfig("editor.fontFamily", Font.toString(fonts), config, showError);
+        await updateConfig("editor.fontFamily", Font.toString(fonts), config, showError);
     }
 }
 
@@ -240,8 +240,8 @@ class ThemeTree extends Tree<Theme> {
         return false;
     }
 
-    setConfig(theme: Theme, config: vscode.WorkspaceConfiguration | null = null, showError: boolean = false): void {
-        updateConfig("workbench.colorTheme", theme.id, config, showError);
+    async setConfig(theme: Theme, config: vscode.WorkspaceConfiguration | null = null, showError: boolean = false): Promise<void> {
+        await updateConfig("workbench.colorTheme", theme.id, config, showError);
     }
 }
 
@@ -273,9 +273,9 @@ class IconTree extends Tree<Icon> {
         this.root.children.sort((a, b) => a.label.localeCompare(b.label));
     }
 
-    setConfig(icon: Icon, config: vscode.WorkspaceConfiguration | null = null, showError: boolean = false): void {
+    async setConfig(icon: Icon, config: vscode.WorkspaceConfiguration | null = null, showError: boolean = false): Promise<void> {
         config = config ?? vscode.workspace.getConfiguration();
-        updateConfig("workbench.iconTheme", icon.id, config, showError);
+        await updateConfig("workbench.iconTheme", icon.id, config, showError);
     }
 
     createView(): vscode.TreeView<Icon> {
@@ -290,6 +290,8 @@ class TreeManager {
     themeTree: ThemeTree;
     iconTree: IconTree;
     timer: NodeJS.Timeout | null = null;
+    updateDelay: number = 1000;
+    minInterval: number = 2000;
 
     constructor(fontTree: FontTree, themeTree: ThemeTree, iconTree: IconTree) {
         this.fontTree = fontTree;
@@ -297,7 +299,7 @@ class TreeManager {
         this.iconTree = iconTree;
     }
 
-    updateRandom(context: vscode.ExtensionContext, startup: boolean = false) {
+    async updateRandom(context: vscode.ExtensionContext, startup: boolean = false) {
         if (this.timer) {
             clearTimeout(this.timer);
             this.timer = null;
@@ -305,62 +307,81 @@ class TreeManager {
         const config = vscode.workspace.getConfiguration();
         const randomType: string = config.get("theme-explorer.randomType", "none");
         if (randomType === "interval") {
-            const startTime: number = this.getStartTime(context);
-            const interval: number = Math.max(config.get("theme-explorer.randomInterval", 5), 0.0005) * 1000 * 60 * 60;
+            const startTime = await this.getStartTime(context);
+            const interval = Math.max(config.get("theme-explorer.randomInterval", 5) * 1000 * 60 * 60, this.minInterval) - this.updateDelay;
             const currentTime = Date.now();
-            const leftTime = interval + startTime - currentTime;
+            const leftTime = interval - (currentTime - startTime);
             this.timer = setTimeout(() => {
                 this.changeAll(context, true);
                 this.timer = setInterval(() => this.changeAll(context, true), interval);
             }, leftTime);
         } else if (randomType === "startup") {
             if (startup) {
-                this.changeAll(context);
+                await this.changeAll(context);
             }
         }
         if (randomType !== "interval") {
-            context.globalState.update("startTime", undefined);
+            await context.globalState.update("startTime", undefined);
         }
     }
 
-    changeAll(context: vscode.ExtensionContext, resetTimer: boolean = false) {
+    async changeAll(context: vscode.ExtensionContext, hasTimer: boolean = false) {
         const { fontTree, themeTree, iconTree } = this;
-        if (resetTimer) {
-            context.globalState.update("startTime", Date.now());
+        if (hasTimer) {
+            const sessionId = await this.getAllowedSession(context);
+            if (sessionId !== vscode.env.sessionId) {
+                return;
+            }
+            const currentTime = Date.now();
+            await context.globalState.update("startTime", currentTime);
         }
         const config = vscode.workspace.getConfiguration();
         if (config.get("theme-explorer.changeFont", true)) {
             const font = fontTree.getRandomItem();
             if (font) {
-                fontTree.setConfig(font, config);
+                await fontTree.setConfig(font, config);
                 fontTree.needsScroll();
             }
         }
         if (config.get("theme-explorer.changeTheme", true)) {
             const theme = themeTree.getRandomItem();
             if (theme) {
-                themeTree.setConfig(theme, config);
+                await themeTree.setConfig(theme, config);
                 themeTree.needsScroll();
             }
         }
         if (config.get("theme-explorer.changeIcon", true)) {
             const icon = iconTree.getRandomItem();
             if (icon) {
-                iconTree.setConfig(icon, config);
+                await iconTree.setConfig(icon, config);
                 iconTree.needsScroll();
             }
         }
     }
 
-    getStartTime(context: vscode.ExtensionContext): number {
+    async getStartTime(context: vscode.ExtensionContext): Promise<number> {
         const startTime: number | undefined = context.globalState.get("startTime");
         if (startTime) {
             return startTime;
         } else {
             const currentTime = Date.now();
-            context.globalState.update("startTime", currentTime);
+            await context.globalState.update("startTime", currentTime);
             return currentTime;
         }
+    }
+
+    /**
+     * Handles multiple VSCode windows opening at the same time.
+     * All instances set the sessionId first, then wait for a while to see which one gains priority.
+     */
+    async getAllowedSession(context: vscode.ExtensionContext): Promise<string | undefined> {
+        await context.globalState.update("sessionId", vscode.env.sessionId);
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                const sessionId = context.globalState.get<string>("sessionId");
+                resolve(sessionId);
+            }, this.updateDelay);
+        });
     }
 }
 
@@ -577,7 +598,7 @@ export function activate(context: vscode.ExtensionContext) {
         } else if (affectsConfiguration("theme-explorer.randomType") || affectsConfiguration("theme-explorer.randomInterval")) {
             treeManager.updateRandom(context);
         }
-        
+
         if (affectsConfiguration("editor.fontFamily") || affectsConfiguration("theme-explorer.fontLigatureAssociation")) {
             updateLigature();
         }
@@ -595,16 +616,16 @@ export function activate(context: vscode.ExtensionContext) {
     treeManager.updateRandom(context, true);
 }
 
-function updateConfig(section: string, value: any, config: vscode.WorkspaceConfiguration | null = null, showError: boolean = false) {
+async function updateConfig(section: string, value: any, config: vscode.WorkspaceConfiguration | null = null, showError: boolean = false) {
     config ??= vscode.workspace.getConfiguration();
-    config.update(section, value, true).then(null, (reason: Error) => {
+    await config.update(section, value, true).then(null, (reason: Error) => {
         if (showError) {
             vscode.window.showErrorMessage(reason.message);
         }
     });
 }
 
-function updateLigature(enabled?: boolean, config: vscode.WorkspaceConfiguration | null = null, showError: boolean = false) {
+async function updateLigature(enabled?: boolean, config: vscode.WorkspaceConfiguration | null = null, showError: boolean = false) {
     config ??= vscode.workspace.getConfiguration();
     enabled ??= config.get("editor.fontLigatures", false) !== false;
     const fonts: string[] = Font.toArray(config.get("editor.fontFamily", ""));
@@ -628,7 +649,7 @@ function updateLigature(enabled?: boolean, config: vscode.WorkspaceConfiguration
         }
     }
 
-    updateConfig(
+    await updateConfig(
         "editor.fontLigatures",
         liga,
         config,
