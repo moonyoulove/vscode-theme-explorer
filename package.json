@@ -8,7 +8,7 @@
     "type": "git",
     "url": "https://github.com/moonyoulove/vscode-theme-explorer.git"
   },
-  "version": "1.1.1",
+  "version": "1.1.2",
   "engines": {
     "vscode": "^1.91.0"
   },
@@ -52,7 +52,7 @@
         "icon": "$(add)"
       },
       {
-        "command": "theme-explorer.themeStyleDark",
+        "command": "theme-explorer.exitThemeStyleDark",
         "title": "Dark Style",
         "icon": {
           "light": "resources/dark-light.svg",
@@ -60,7 +60,7 @@
         }
       },
       {
-        "command": "theme-explorer.themeStyleLight",
+        "command": "theme-explorer.exitThemeStyleLight",
         "title": "Light Style",
         "icon": {
           "light": "resources/light-light.svg",
@@ -68,7 +68,7 @@
         }
       },
       {
-        "command": "theme-explorer.themeStyleBoth",
+        "command": "theme-explorer.exitThemeStyleBoth",
         "title": "All Style",
         "icon": {
           "light": "resources/both-light.svg",
@@ -135,7 +135,7 @@
         }
       },
       {
-        "command": "theme-explorer.ligatureEnabled",
+        "command": "theme-explorer.exitLigatureEnabled",
         "title": "Ligature Enabled",
         "icon": {
           "light": "resources/merge-light.svg",
@@ -143,7 +143,7 @@
         }
       },
       {
-        "command": "theme-explorer.ligatureDisabled",
+        "command": "theme-explorer.exitLigatureDisabled",
         "title": "Ligature Disabled",
         "icon": {
           "light": "resources/split-light.svg",
@@ -205,7 +205,7 @@
         },
         "theme-explorer.fontLigatureAssociation": {
           "type": "object",
-          "markdownDescription": "Association of a font and a font ligature configuration.\n\n**Example:**\n```json\n\"theme-explorer.fontLigatureAssociation\": {\n        \"Fira Code\": \"'cv02', 'cv14', 'cv25', 'cv26', 'cv28', 'cv32', 'ss01', 'ss02', 'ss06', 'zero'\",\n        \"JetBrains Mono\": false\n    }\n```"
+          "markdownDescription": "Association of a font and a font ligature configuration.\n\n**Example:**\n```json\n\"theme-explorer.fontLigatureAssociation\": {\n        \"Fira Code\": \"'cv02', 'cv14', 'cv25', 'cv26', 'cv28', 'cv32', 'ss01', 'ss02', 'ss06', 'zero'\",\n        \"JetBrains Mono\": false,\n        \"*\": \"'cv02', 'cv14'\" // all other fonts\n    }\n```"
         },
         "theme-explorer.randomType": {
           "type": "string",
@@ -315,17 +315,17 @@
           "group": "navigation@2"
         },
         {
-          "command": "theme-explorer.themeStyleDark",
+          "command": "theme-explorer.exitThemeStyleDark",
           "when": "view == theme-explorer.theme && config.theme-explorer.themeStyle == dark",
           "group": "navigation@1"
         },
         {
-          "command": "theme-explorer.themeStyleLight",
+          "command": "theme-explorer.exitThemeStyleLight",
           "when": "view == theme-explorer.theme && config.theme-explorer.themeStyle == light",
           "group": "navigation@1"
         },
         {
-          "command": "theme-explorer.themeStyleBoth",
+          "command": "theme-explorer.exitThemeStyleBoth",
           "when": "view == theme-explorer.theme && config.theme-explorer.themeStyle == both",
           "group": "navigation@1"
         },
@@ -345,13 +345,13 @@
           "group": "navigation@1"
         },
         {
-          "command": "theme-explorer.ligatureEnabled",
-          "when": "view == theme-explorer.font && config.editor.fontLigatures",
+          "command": "theme-explorer.exitLigatureEnabled",
+          "when": "view == theme-explorer.font && (config.editor.fontLigatures != false || config.editor.fontLigatures == '\"\"')",
           "group": "navigation@1"
         },
         {
-          "command": "theme-explorer.ligatureDisabled",
-          "when": "view == theme-explorer.font && !config.editor.fontLigatures",
+          "command": "theme-explorer.exitLigatureDisabled",
+          "when": "view == theme-explorer.font && config.editor.fontLigatures == false",
           "group": "navigation@1"
         }
       ],
@@ -377,15 +377,15 @@
           "when": "false"
         },
         {
-          "command": "theme-explorer.themeStyleDark",
+          "command": "theme-explorer.exitThemeStyleDark",
           "when": "false"
         },
         {
-          "command": "theme-explorer.themeStyleLight",
+          "command": "theme-explorer.exitThemeStyleLight",
           "when": "false"
         },
         {
-          "command": "theme-explorer.themeStyleBoth",
+          "command": "theme-explorer.exitThemeStyleBoth",
           "when": "false"
         },
         {
@@ -429,11 +429,11 @@
           "when": "false"
         },
         {
-          "command": "theme-explorer.ligatureEnabled",
+          "command": "theme-explorer.exitLigatureEnabled",
           "when": "false"
         },
         {
-          "command": "theme-explorer.ligatureDisabled",
+          "command": "theme-explorer.exitLigatureDisabled",
           "when": "false"
         }
       ]

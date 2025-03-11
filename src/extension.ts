@@ -88,7 +88,7 @@ abstract class Tree<T extends Node> implements vscode.TreeDataProvider<T> {
         return filtered[index];
     }
 
-    abstract setConfig(value: T, config: vscode.WorkspaceConfiguration, showError: boolean): Promise<void>;
+    abstract setConfig(value: T, config?: vscode.WorkspaceConfiguration, showError?: boolean): Promise<void>;
 
     setView(view: vscode.TreeView<T>) {
         this.view = view;
@@ -131,8 +131,7 @@ class FontTree extends Tree<Font> implements vscode.TreeDragAndDropController<Fo
         const fonts: string[] = Font.toArray(config.get("editor.fontFamily", ""));
         const ignoredFonts: string[] = config.get("theme-explorer.ignoreFonts", []);
         const currentFont = fonts[0];
-        const hasHidden = fonts.slice(1).includes(fonts[0]);
-        fonts.slice(hasHidden ? 1 : 0).forEach((font) => {
+        fonts.slice(this.hasPrimaryFont(fonts) ? 1 : 0).forEach((font) => {
             const ignored = ignoredFonts.includes(font);
             const checked = currentFont === font;
             this.root.addChild(new Font(font, ignored, checked));
@@ -154,24 +153,30 @@ class FontTree extends Tree<Font> implements vscode.TreeDragAndDropController<Fo
             const targetIndex = fonts.lastIndexOf(target.name);
             fonts.splice(sourceIndex, 1);
             fonts.splice(targetIndex, 0, sourceName);
-            const hasHidden = fonts.slice(1).includes(fonts[0]);
-            if (!hasHidden) {
+            if (!this.hasPrimaryFont(fonts)) {
                 fonts.unshift(fonts[0]);
             }
-            updateConfig("editor.fontFamily", Font.toString(fonts), config, true);
+            updateConfig("editor.fontFamily", Font.toString(fonts), config);
         }
     }
 
-    async setConfig(font: Font, config: vscode.WorkspaceConfiguration | null = null, showError: boolean = false): Promise<void> {
-        config = config ?? vscode.workspace.getConfiguration();
+    async setConfig(font: Font, config?: vscode.WorkspaceConfiguration, showError: boolean = true): Promise<void> {
+        config ??= vscode.workspace.getConfiguration();
         const fonts: string[] = Font.toArray(config.get("editor.fontFamily", ""));
-        const hasHidden = fonts.slice(1).includes(fonts[0]);
-        if (hasHidden) {
+        if (this.hasPrimaryFont(fonts)) {
             fonts[0] = font.name;
         } else {
             fonts.unshift(font.name);
         }
         await updateConfig("editor.fontFamily", Font.toString(fonts), config, showError);
+    }
+
+    /**
+     * The primary font is intended to change the current font without affecting the order of the fallback fonts.
+     * The side effect is that the font may appear twice in the config string.
+     */
+    hasPrimaryFont(fonts: string[]) {
+        return fonts.slice(1).includes(fonts[0]);
     }
 }
 
@@ -240,7 +245,8 @@ class ThemeTree extends Tree<Theme> {
         return false;
     }
 
-    async setConfig(theme: Theme, config: vscode.WorkspaceConfiguration | null = null, showError: boolean = false): Promise<void> {
+    async setConfig(theme: Theme, config?: vscode.WorkspaceConfiguration, showError: boolean = true): Promise<void> {
+        config ??= vscode.workspace.getConfiguration();
         await updateConfig("workbench.colorTheme", theme.id, config, showError);
     }
 }
@@ -273,8 +279,8 @@ class IconTree extends Tree<Icon> {
         this.root.children.sort((a, b) => a.label.localeCompare(b.label));
     }
 
-    async setConfig(icon: Icon, config: vscode.WorkspaceConfiguration | null = null, showError: boolean = false): Promise<void> {
-        config = config ?? vscode.workspace.getConfiguration();
+    async setConfig(icon: Icon, config?: vscode.WorkspaceConfiguration, showError: boolean = true): Promise<void> {
+        config ??= vscode.workspace.getConfiguration();
         await updateConfig("workbench.iconTheme", icon.id, config, showError);
     }
 
@@ -427,6 +433,31 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }));
 
+    context.subscriptions.push(fontTreeView.onDidChangeCheckboxState(({ items }) => {
+        const [font, checkboxState] = items[0];
+        if (checkboxState === vscode.TreeItemCheckboxState.Checked) {
+            fontTree.setConfig(font);
+        } else {
+            fontTree.refresh();
+        }
+    }));
+    context.subscriptions.push(themeTreeView.onDidChangeCheckboxState(({ items }) => {
+        const [theme, checkboxState] = items[0];
+        if (checkboxState === vscode.TreeItemCheckboxState.Checked) {
+            themeTree.setConfig(theme);
+        } else {
+            themeTree.refresh();
+        }
+    }));
+    context.subscriptions.push(iconTreeView.onDidChangeCheckboxState(({ items }) => {
+        const [icon, checkboxState] = items[0];
+        if (checkboxState === vscode.TreeItemCheckboxState.Checked) {
+            iconTree.setConfig(icon);
+        } else {
+            iconTree.refresh();
+        }
+    }));
+
     context.subscriptions.push(vscode.commands.registerCommand("theme-explorer.randomAll", () => treeManager.changeAll(context)));
 
     context.subscriptions.push(vscode.commands.registerCommand("theme-explorer.clickFontItem", (font) => fontTree.setConfig(font)));
@@ -437,19 +468,19 @@ export function activate(context: vscode.ExtensionContext) {
         const config = vscode.workspace.getConfiguration();
         const ignored: string[] = config.get("theme-explorer.ignoreFonts", []);
         ignored.push(font.name);
-        updateConfig("theme-explorer.ignoreFonts", ignored, config, true);
+        updateConfig("theme-explorer.ignoreFonts", ignored, config);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("theme-explorer.ignoreTheme", (theme: Theme) => {
         const config = vscode.workspace.getConfiguration();
         const ignored: string[] = config.get("theme-explorer.ignoreThemes", []);
         ignored.push(theme.id);
-        updateConfig("theme-explorer.ignoreThemes", ignored, config, true);
+        updateConfig("theme-explorer.ignoreThemes", ignored, config);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("theme-explorer.ignoreIcon", (icon: Icon) => {
         const config = vscode.workspace.getConfiguration();
         const ignored: string[] = config.get("theme-explorer.ignoreIcons", []);
         ignored.push(icon.id);
-        updateConfig("theme-explorer.ignoreIcons", ignored, config, true);
+        updateConfig("theme-explorer.ignoreIcons", ignored, config);
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand("theme-explorer.unignoreFont", (font: Font) => {
@@ -459,7 +490,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (index >= 0) {
             ignored.splice(index, 1);
         }
-        updateConfig("theme-explorer.ignoreFonts", ignored, config, true);
+        updateConfig("theme-explorer.ignoreFonts", ignored, config);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("theme-explorer.unignoreTheme", (theme: Theme) => {
         const config = vscode.workspace.getConfiguration();
@@ -468,7 +499,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (index >= 0) {
             ignored.splice(index, 1);
         }
-        updateConfig("theme-explorer.ignoreThemes", ignored, config, true);
+        updateConfig("theme-explorer.ignoreThemes", ignored, config);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("theme-explorer.unignoreIcon", (icon: Icon) => {
         const config = vscode.workspace.getConfiguration();
@@ -477,7 +508,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (index >= 0) {
             ignored.splice(index, 1);
         }
-        updateConfig("theme-explorer.ignoreIcons", ignored, config, true);
+        updateConfig("theme-explorer.ignoreIcons", ignored, config);
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand("theme-explorer.deleteFont", (font: Font) => {
@@ -487,7 +518,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (fonts[0] === font.name) {
             fonts.shift();
         }
-        updateConfig("editor.fontFamily", Font.toString(fonts), config, true);
+        updateConfig("editor.fontFamily", Font.toString(fonts), config);
     }));
     context.subscriptions.push(vscode.commands.registerCommand("theme-explorer.deleteTheme", (theme: Theme | Icon) => {
         const extension = vscode.extensions.all.find((extension) => extension.id === theme.extension.id);
@@ -528,7 +559,7 @@ export function activate(context: vscode.ExtensionContext) {
                 const fonts: string[] = yaml.parse("[" + config.get("editor.fontFamily") + "]");
                 const newFonts = yaml.parse("[" + value + "]");
                 fonts.push(...newFonts);
-                updateConfig("editor.fontFamily", Font.toString(fonts), config, true);
+                updateConfig("editor.fontFamily", Font.toString(fonts), config);
             }
         });
     }));
@@ -539,49 +570,44 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.executeCommand("workbench.extensions.search", "tag:icon-theme");
     }));
 
-    context.subscriptions.push(vscode.commands.registerCommand("theme-explorer.themeStyleDark", () => {
-        const config = vscode.workspace.getConfiguration();
-        updateConfig("theme-explorer.themeStyle", "light", config, true);
+    context.subscriptions.push(vscode.commands.registerCommand("theme-explorer.exitThemeStyleDark", () => {
+        updateConfig("theme-explorer.themeStyle", "light");
     }));
-    context.subscriptions.push(vscode.commands.registerCommand("theme-explorer.themeStyleLight", () => {
-        const config = vscode.workspace.getConfiguration();
-        updateConfig("theme-explorer.themeStyle", "both", config, true);
+    context.subscriptions.push(vscode.commands.registerCommand("theme-explorer.exitThemeStyleLight", () => {
+        updateConfig("theme-explorer.themeStyle", "both");
     }));
-    context.subscriptions.push(vscode.commands.registerCommand("theme-explorer.themeStyleBoth", () => {
-        const config = vscode.workspace.getConfiguration();
-        updateConfig("theme-explorer.themeStyle", "dark", config, true);
+    context.subscriptions.push(vscode.commands.registerCommand("theme-explorer.exitThemeStyleBoth", () => {
+        updateConfig("theme-explorer.themeStyle", "dark");
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand("theme-explorer.randomFont", () => {
         const font = fontTree.getRandomItem();
         if (font) {
-            fontTree.setConfig(font, null, true);
+            fontTree.setConfig(font);
             fontTree.needsScroll();
         }
     }));
     context.subscriptions.push(vscode.commands.registerCommand("theme-explorer.randomIcon", () => {
         const icon = iconTree.getRandomItem();
         if (icon) {
-            iconTree.setConfig(icon, null, true);
+            iconTree.setConfig(icon);
             iconTree.needsScroll();
         }
     }));
     context.subscriptions.push(vscode.commands.registerCommand("theme-explorer.randomTheme", () => {
         const theme = themeTree.getRandomItem();
         if (theme) {
-            themeTree.setConfig(theme, null, true);
+            themeTree.setConfig(theme);
             themeTree.needsScroll();
         }
     }));
 
-    context.subscriptions.push(vscode.commands.registerCommand("theme-explorer.ligatureEnabled", () => {
-        const config = vscode.workspace.getConfiguration();
-        updateLigature(false, config, true);
+    context.subscriptions.push(vscode.commands.registerCommand("theme-explorer.exitLigatureEnabled", () => {
+        updateLigature(false);
     }));
 
-    context.subscriptions.push(vscode.commands.registerCommand("theme-explorer.ligatureDisabled", () => {
-        const config = vscode.workspace.getConfiguration();
-        updateLigature(true, config, true);
+    context.subscriptions.push(vscode.commands.registerCommand("theme-explorer.exitLigatureDisabled", () => {
+        updateLigature(true);
     }));
 
     context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(({ affectsConfiguration }) => {
@@ -616,7 +642,7 @@ export function activate(context: vscode.ExtensionContext) {
     treeManager.updateRandom(context, true);
 }
 
-async function updateConfig(section: string, value: any, config: vscode.WorkspaceConfiguration | null = null, showError: boolean = false) {
+async function updateConfig(section: string, value: any, config?: vscode.WorkspaceConfiguration, showError: boolean = true) {
     config ??= vscode.workspace.getConfiguration();
     await config.update(section, value, true).then(null, (reason: Error) => {
         if (showError) {
@@ -625,28 +651,26 @@ async function updateConfig(section: string, value: any, config: vscode.Workspac
     });
 }
 
-async function updateLigature(enabled?: boolean, config: vscode.WorkspaceConfiguration | null = null, showError: boolean = false) {
+async function updateLigature(enabled?: boolean, config?: vscode.WorkspaceConfiguration, showError: boolean = true) {
     config ??= vscode.workspace.getConfiguration();
     enabled ??= config.get("editor.fontLigatures", false) !== false;
     const fonts: string[] = Font.toArray(config.get("editor.fontFamily", ""));
 
-    const fontLigatures: object = config.get(
+    const fontLigatures: Record<string,string | boolean> = config.get(
         "theme-explorer.fontLigatureAssociation",
         {},
     );
-    let liga: boolean | string = enabled;
+    let liga: boolean | string;
     // can only be set individually when globally enabled
     if (enabled) {
-        Object.entries(fontLigatures).forEach(([key, value]) => {
-            if (key === fonts[0]) {
-                liga = value;
-            }
-        });
+        liga = fontLigatures[fonts[0]] ?? fontLigatures["*"] ?? true;
 
         // avoid being treated as globally disabled
         if (!liga) {
             liga = "'liga' off";
         }
+    } else {
+        liga = false;
     }
 
     await updateConfig(
